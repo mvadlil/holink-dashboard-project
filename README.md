@@ -929,3 +929,20 @@ For the fastest evaluation path:
 8. Click the public links to create click events
 9. Return to `/dashboard` and verify analytics totals
 10. Optionally register a second user and confirm ownership checks still block access to another user's resources
+
+## Quick Review Credentials
+
+Seeded users:
+
+- kevin@example.com / password123
+- sarah@example.com / password123
+
+Suggested first route:
+
+1. Open `/login`
+2. Login with Kevin
+3. Create/update profile
+4. Add links
+5. Open `/u/{username}`
+6. Click public links
+7. Return to dashboard and refresh analytics

@@ -17,3 +17,8 @@ spring:
 
 server:
   port: 8080
+
+auth:
+  jwt:
+    secret: local-development-jwt-secret-change-me-1234567890
+    expiration-minutes: 1440

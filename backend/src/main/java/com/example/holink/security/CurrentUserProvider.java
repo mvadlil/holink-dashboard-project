@@ -1,31 +1,28 @@
 package com.example.holink.security;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.example.holink.exception.UnauthorizedException;
 
 @Component
 public class CurrentUserProvider {
 
-    private static final String USER_ID_HEADER = "X-User-Id";
-    private static final String DEFAULT_USER_ID = "user_001";
-
     public String getCurrentUserId() {
-        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
-        if (!(attributes instanceof ServletRequestAttributes servletRequestAttributes)) {
-            return DEFAULT_USER_ID;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new UnauthorizedException("Authentication is required");
         }
 
-        HttpServletRequest request = servletRequestAttributes.getRequest();
-        String headerValue = request.getHeader(USER_ID_HEADER);
-        if (!StringUtils.hasText(headerValue)) {
-            return DEFAULT_USER_ID;
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof AuthenticatedUser authenticatedUser) {
+            return authenticatedUser.userId();
+        }
+        if (principal instanceof String userId && !userId.isBlank() && !"anonymousUser".equals(userId)) {
+            return userId;
         }
 
-        return headerValue.trim();
+        throw new UnauthorizedException("Authentication is required");
     }
 }

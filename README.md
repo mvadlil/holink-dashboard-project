@@ -1,18 +1,24 @@
 # HoLink
 
-HoLink is a simplified link-in-bio fullstack prototype built for local evaluation. It includes a dashboard for profile and link management, a public profile page by username, click tracking for public link visits, and a simple analytics view that shows total clicks per link.
+HoLink is a simplified link-in-bio fullstack prototype built for local evaluation. It includes account registration and login, a JWT-protected dashboard for profile and link management, a public profile page by username, click tracking for public link visits, and a simple analytics view that shows total clicks per link.
 
-The project is intentionally scoped for a take-home style review: it uses mocked authentication, H2 as the default database, and a small but realistic backend/frontend structure.
+The project is intentionally scoped for a take-home style review: it uses H2 as the default database, keeps authentication simple for local prototype use, and aims for a clean backend/frontend structure without overengineering.
 
 ## Project Overview
 
-HoLink supports two main experiences:
+HoLink supports four main routes:
 
+- `/login` for signing in
+- `/register` for creating a new account
 - `/dashboard` for managing a single public profile, links, and basic analytics
-- `/u/:username` for a visitor-facing public profile page that shows active links only
+- `/u/:username` for a visitor-facing public profile page that remains accessible without login
 
 Core implemented behavior:
 
+- Register a new user account
+- Login with JWT authentication
+- Logout and clear local auth state
+- Protect dashboard APIs and the `/dashboard` route
 - Create and update one profile per user
 - Normalize and enforce unique usernames
 - Create, update, delete, and reorder links using a numeric `position`
@@ -30,7 +36,9 @@ Core implemented behavior:
 - Maven
 - Spring Web
 - Spring Data JPA
+- Spring Security
 - Bean Validation
+- BCrypt password hashing
 - Lombok
 
 ### Frontend
@@ -41,17 +49,24 @@ Core implemented behavior:
 - Vue Router
 - Axios
 
+### Authentication
+
+- JWT-based authentication for protected APIs
+- Stateless session handling
+- Frontend token storage in `localStorage` for prototype simplicity
+
 ### Database
 
 - H2 in-memory database by default
 
-### Mock Auth
-
-- Frontend sends `X-User-Id`
-- Backend reads `X-User-Id` and defaults to `user_001` if missing
-
 ## Features Implemented
 
+- Create account
+- Login
+- Logout
+- JWT-protected dashboard APIs
+- Frontend route guard for `/dashboard`
+- Password hashing with BCrypt
 - Profile create/update
 - Username normalization and uniqueness
 - Link create/update/delete
@@ -99,6 +114,11 @@ Expected response:
 }
 ```
 
+Seeded users for local testing:
+
+- `kevin@example.com` / `password123`
+- `sarah@example.com` / `password123`
+
 H2 console:
 
 ```text
@@ -133,32 +153,60 @@ http://localhost:5173
 
 Important routes:
 
+- `http://localhost:5173/login`
+- `http://localhost:5173/register`
 - `http://localhost:5173/dashboard`
 - `http://localhost:5173/u/:username`
 
 Examples:
 
+- `http://localhost:5173/login`
+- `http://localhost:5173/register`
 - `http://localhost:5173/dashboard`
 - `http://localhost:5173/u/kevincreator`
 
-## Mock Authentication
+## Authentication
 
-This prototype does not implement real login or registration. Instead:
+This prototype now uses simple JWT authentication for local evaluation.
 
-- The frontend uses the header `X-User-Id`
-- If the header is missing, the backend defaults to `user_001`
-- Seeded users are:
-  - `user_001` / Kevin / `kevin@example.com`
-  - `user_002` / Sarah / `sarah@example.com`
+How it works:
 
-This keeps the project focused on profile ownership, link ownership, public routing, click tracking, and validation rather than auth flows.
+- Users can register with `POST /api/auth/register`
+- Users can login with `POST /api/auth/login`
+- The backend returns a JWT token plus basic user data
+- The frontend stores the token in `localStorage` under `holink_auth_token`
+- The frontend stores user info in `localStorage` under `holink_auth_user`
+- The frontend sends `Authorization: Bearer <token>` automatically for protected API calls
+- The `/dashboard` route requires login
+- Public profile and public click tracking remain accessible without login
+- Passwords are stored as BCrypt hashes, not plain text
 
-Even with mocked auth, ownership logic is still enforced:
+Prototype note:
 
-- A user cannot edit another user's profile
-- A user cannot create links under another user's profile
-- A user cannot edit/delete another user's links
-- A user cannot view another user's private analytics
+- This is a simple JWT implementation for local prototype use
+- It is not presented as a production-complete authentication system
+- There is no refresh token flow, email verification, or password reset yet
+
+## Public vs Protected Endpoints
+
+### Public Endpoints
+
+- `GET /api/health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/public/{username}`
+- `POST /api/links/{linkId}/click`
+
+### Protected Endpoints
+
+- `GET /api/auth/me`
+- `POST /api/profiles`
+- `PUT /api/profiles/{profileId}`
+- `GET /api/me/profile`
+- `POST /api/links`
+- `PUT /api/links/{linkId}`
+- `DELETE /api/links/{linkId}`
+- `GET /api/analytics/links`
 
 ## Architecture Overview
 
@@ -167,31 +215,34 @@ Even with mocked auth, ownership logic is still enforced:
 The backend follows a layered Spring Boot structure:
 
 - `controller/`: REST endpoints
-- `service/`: business logic for profiles, links, clicks, and analytics
+- `service/`: business logic for auth, profiles, links, clicks, and analytics
 - `repository/`: JPA access for entities
 - `validation/`: reusable validation and normalization helpers
 - `exception/`: custom exceptions and a global JSON error handler
-- `security/`: mocked current-user lookup via `X-User-Id`
-- `config/`: CORS and seed data
+- `security/`: JWT creation, JWT filter, current-user lookup, and auth entry point
+- `config/`: CORS, security, and seed data
 
 ### Frontend
 
 The frontend uses a small Vue structure:
 
-- `pages/`: route-level pages (`DashboardPage.vue`, `PublicProfilePage.vue`)
+- `pages/`: route-level pages (`LoginPage.vue`, `RegisterPage.vue`, `DashboardPage.vue`, `PublicProfilePage.vue`)
 - `components/`: reusable UI blocks (`ProfileForm`, `LinkEditor`, `LinkList`, `AnalyticsSummary`, etc.)
 - `api/`: centralized Axios-based API helpers
-- `router/`: Vue Router setup
+- `router/`: Vue Router setup with auth guard
+- `utils/`: token storage helpers and auth route helpers
 
 ### Data Flow
 
 Typical flow:
 
-1. Dashboard fetches current user profile from `GET /api/me/profile`
-2. Dashboard submits profile and link changes to backend APIs
-3. Public page fetches active profile/link data from `GET /api/public/{username}`
-4. Public link click posts to `POST /api/links/{linkId}/click`
-5. Dashboard analytics reads totals from `GET /api/analytics/links`
+1. Register or login to receive a JWT token
+2. Frontend stores the token and user info in `localStorage`
+3. Dashboard fetches the current user profile from `GET /api/me/profile`
+4. Dashboard submits profile and link changes to protected backend APIs
+5. Public page fetches active profile/link data from `GET /api/public/{username}`
+6. Public link click posts to `POST /api/links/{linkId}/click`
+7. Dashboard analytics reads totals from `GET /api/analytics/links`
 
 ## Database Design
 
@@ -212,6 +263,7 @@ Link 1 - many ClickEvents
 
 Important constraints and rules:
 
+- `User.email` is unique
 - `Profile.username` is unique
 - A `Profile` belongs to exactly one `User`
 - A `Link` belongs to exactly one `Profile`
@@ -220,7 +272,7 @@ Important constraints and rules:
 
 Entity summary:
 
-- `User`: seeded mock user identity
+- `User`: account identity with `name`, `email`, and `passwordHash`
 - `Profile`: public-facing identity (`username`, `displayName`, `bio`, `avatarUrl`)
 - `Link`: ordered public destinations with `isActive` and `position`
 - `ClickEvent`: stored click record with referrer, user agent, and optional UTM params
@@ -245,11 +297,106 @@ Important error cases:
 
 - None expected in normal local startup
 
+### POST `/api/auth/register`
+
+Purpose:
+
+- Create a new user account and immediately return a JWT token
+
+Request body:
+
+```json
+{
+  "name": "Muhammad Fadlil",
+  "email": "fadlil@example.com",
+  "password": "password123"
+}
+```
+
+Response example:
+
+```json
+{
+  "token": "jwt-token-here",
+  "user": {
+    "id": "user-id",
+    "name": "Muhammad Fadlil",
+    "email": "fadlil@example.com"
+  }
+}
+```
+
+Important error cases:
+
+- `400` invalid request body, invalid email format, or short password
+- `409` email already registered
+
+### POST `/api/auth/login`
+
+Purpose:
+
+- Authenticate an existing user and return a JWT token
+
+Request body:
+
+```json
+{
+  "email": "kevin@example.com",
+  "password": "password123"
+}
+```
+
+Response example:
+
+```json
+{
+  "token": "jwt-token-here",
+  "user": {
+    "id": "user_001",
+    "name": "Kevin",
+    "email": "kevin@example.com"
+  }
+}
+```
+
+Important error cases:
+
+- `400` invalid request body
+- `401` invalid email or password
+
+### GET `/api/auth/me`
+
+Purpose:
+
+- Validate the current JWT token and return the authenticated user
+
+Headers:
+
+```http
+Authorization: Bearer <token>
+```
+
+Response example:
+
+```json
+{
+  "id": "user_001",
+  "name": "Kevin",
+  "email": "kevin@example.com"
+}
+```
+
+Important error cases:
+
+- `401` missing token
+- `401` invalid token
+- `401` expired token
+
 ### POST `/api/profiles`
 
 Purpose:
 
-- Create a profile for the current mocked user
+- Create a profile for the current authenticated user
 
 Request body:
 
@@ -277,7 +424,7 @@ Response example:
 Important error cases:
 
 - `400` invalid username, display name, bio, or avatar URL
-- `404` current mocked user does not exist
+- `401` missing or invalid JWT
 - `409` username already exists
 - `409` current user already has a profile
 
@@ -285,7 +432,7 @@ Important error cases:
 
 Purpose:
 
-- Update the current user's existing profile
+- Update the current authenticated user's existing profile
 
 Request body:
 
@@ -313,6 +460,7 @@ Response example:
 Important error cases:
 
 - `400` invalid username or invalid text/URL fields
+- `401` missing or invalid JWT
 - `403` current user does not own the profile
 - `404` profile not found
 - `409` username already belongs to another profile
@@ -321,7 +469,7 @@ Important error cases:
 
 Purpose:
 
-- Get the current user's dashboard profile and links
+- Get the current authenticated user's dashboard profile and links
 
 Response example:
 
@@ -349,6 +497,7 @@ Response example:
 
 Important error cases:
 
+- `401` missing or invalid JWT
 - `404` current user has no profile yet
 
 ### GET `/api/public/{username}`
@@ -388,7 +537,7 @@ Important error cases:
 
 Purpose:
 
-- Create a new link under the current user's profile
+- Create a new link under the current authenticated user's profile
 
 Request body:
 
@@ -418,6 +567,7 @@ Response example:
 Important error cases:
 
 - `400` blank title, invalid URL, dangerous URL scheme
+- `401` missing or invalid JWT
 - `403` current user does not own the profile
 - `404` profile not found
 
@@ -425,7 +575,7 @@ Important error cases:
 
 Purpose:
 
-- Update an existing link owned by the current user
+- Update an existing link owned by the current authenticated user
 
 Request body:
 
@@ -454,6 +604,7 @@ Response example:
 Important error cases:
 
 - `400` blank title, invalid URL, dangerous URL scheme
+- `401` missing or invalid JWT
 - `403` current user does not own the link's profile
 - `404` link not found
 
@@ -461,7 +612,7 @@ Important error cases:
 
 Purpose:
 
-- Delete an existing link owned by the current user
+- Delete an existing link owned by the current authenticated user
 
 Request body:
 
@@ -475,6 +626,7 @@ Response example:
 
 Important error cases:
 
+- `401` missing or invalid JWT
 - `403` current user does not own the link's profile
 - `404` link not found
 
@@ -509,6 +661,7 @@ Important error cases:
 
 Notes:
 
+- This endpoint is intentionally public so visitors can open shared links without login
 - The backend also reads `Referer` and `User-Agent` headers when available
 - If persistence of the click record fails but the destination URL is already known, the backend is designed to still return the redirect URL
 
@@ -516,7 +669,7 @@ Notes:
 
 Purpose:
 
-- Return total clicks per link for the current user
+- Return total clicks per link for the current authenticated user
 
 Response example:
 
@@ -536,6 +689,7 @@ Response example:
 
 Important error cases:
 
+- `401` missing or invalid JWT
 - `404` current user profile not found
 - `403` analytics access blocked by ownership rules
 
@@ -603,6 +757,23 @@ example.com/no-protocol
 
 ## Security Notes
 
+### Password Handling
+
+- Passwords are stored as BCrypt hashes
+- Plain-text passwords are never persisted
+
+### JWT Protection
+
+- Protected APIs require a valid Bearer token
+- The backend uses a stateless security setup
+- Ownership checks are still enforced server-side after authentication
+
+### Frontend Token Storage Trade-off
+
+- The frontend stores the JWT in `localStorage` for prototype simplicity
+- This is convenient for local evaluation, but not the most secure production approach
+- Production systems should prefer more defensive approaches such as secure HttpOnly cookies where appropriate
+
 ### XSS Prevention
 
 - Frontend does not use `v-html` for user-generated content
@@ -615,11 +786,10 @@ example.com/no-protocol
 - Only `http` and `https` are allowed
 - Unsafe redirect schemes such as `javascript:` and `data:` are rejected before persistence
 
-### Ownership Checks
+### Public Click Endpoint
 
-- Profile updates are restricted to the owner
-- Link create/update/delete actions are restricted to the owner of the parent profile
-- Analytics are returned only for the current mocked user
+- `POST /api/links/{linkId}/click` remains public intentionally
+- Visitors should be able to open shared links without signing in
 
 ### Privacy and Logging Considerations
 
@@ -668,6 +838,12 @@ Possible future improvements:
 
 - [ ] Start backend successfully and verify `GET /api/health`
 - [ ] Open H2 console and confirm seeded users exist
+- [ ] Register a new account
+- [ ] Login with seeded user `kevin@example.com / password123`
+- [ ] Login with a newly registered user
+- [ ] Access `/dashboard` without a token and verify redirect to `/login`
+- [ ] Set an invalid token and verify session is cleared
+- [ ] Logout and verify token plus stored user are removed
 - [ ] Create a profile from `/dashboard`
 - [ ] Update the profile from `/dashboard`
 - [ ] Verify username normalization and uniqueness
@@ -676,15 +852,20 @@ Possible future improvements:
 - [ ] Delete a link
 - [ ] Toggle active/inactive status
 - [ ] Confirm dangerous URLs are rejected
-- [ ] Open `/u/:username` and verify only active links are shown
+- [ ] Open `/u/:username` without login and verify only active links are shown
 - [ ] Click a public link and verify redirect occurs
 - [ ] Verify click rows appear in `CLICK_EVENTS`
 - [ ] Verify analytics count updates on `/dashboard`
-- [ ] Switch mocked user to `user_002` and verify ownership checks block access to `user_001` resources
+- [ ] Call a protected API without a token and verify `401`
+- [ ] Verify user A cannot edit or delete user B resources
 
 ## Known Limitations
 
-- Mock auth only; there is no real login or registration
+- Auth is a simple JWT prototype, not a production-complete auth platform
+- No refresh token flow yet
+- No email verification
+- No password reset
+- Token is stored in `localStorage` for prototype simplicity
 - H2 in-memory data resets when the backend restarts
 - No production deployment setup yet
 - No advanced anti-spam or anti-bot protection for click tracking
@@ -694,10 +875,14 @@ Possible future improvements:
 
 ## Future Improvements
 
-- JWT or session-based authentication
+- Refresh token rotation
+- HttpOnly secure cookies
+- Email verification
+- Password reset
+- Account settings
+- Production secret management
 - Optional PostgreSQL support with Docker
 - Flyway migrations
-- Real deployment setup
 - Rate limiting
 - Unique click tracking
 - Daily analytics aggregation
@@ -709,19 +894,22 @@ Possible future improvements:
 ## Trade-offs
 
 - H2 was chosen for quick local review and minimal setup
-- Mock auth was chosen to keep the scope focused on ownership logic rather than auth flows
+- JWT auth was implemented in a simple form so the evaluator can test real login flows without adding too much product complexity
 - Analytics is intentionally simple so the core product flow can be reviewed quickly
 - The dashboard uses inline create/edit flows for faster UX and simpler implementation
+- `localStorage` token storage is acceptable for a local prototype but not ideal for hardened production security
 
 ## Suggested Review Flow
 
 For the fastest evaluation path:
 
 1. Start the backend and verify `/api/health`
-2. Start the frontend and open `/dashboard`
-3. Create or update a profile
-4. Add a few links and toggle one inactive
-5. Open `/u/:username` and confirm only active links render
-6. Click the public links to create click events
-7. Return to `/dashboard` and verify analytics totals
-8. Optionally test ownership by changing the mocked user header to `user_002`
+2. Start the frontend and open `/register` or `/login`
+3. Login with `kevin@example.com / password123`
+4. Confirm `/dashboard` is accessible only after authentication
+5. Create or update a profile
+6. Add a few links and toggle one inactive
+7. Open `/u/:username` and confirm only active links render without login
+8. Click the public links to create click events
+9. Return to `/dashboard` and verify analytics totals
+10. Optionally register a second user and confirm ownership checks still block access to another user's resources

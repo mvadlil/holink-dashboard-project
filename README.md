@@ -23,6 +23,7 @@ Core implemented behavior:
 - Normalize and enforce unique usernames
 - Create, update, delete, and reorder links using a numeric `position`
 - Toggle links active/inactive
+- Copy the current user's public profile URL from the dashboard
 - Show public profiles by username
 - Track clicks before redirecting visitors to the destination URL
 - Show total click counts per link in the dashboard
@@ -72,6 +73,7 @@ Core implemented behavior:
 - Link create/update/delete
 - Active/inactive links
 - Link ordering using `position`
+- Link position uniqueness validation per profile
 - Public profile page by username
 - Click tracking
 - Basic analytics: total clicks per link
@@ -79,6 +81,8 @@ Core implemented behavior:
 - Unsafe URL rejection for dangerous schemes such as `javascript:` and `data:`
 - Ownership checks for profile, link, and analytics access
 - Avatar fallback on the frontend when the public avatar image is missing or fails to load
+- Share Profile action in the dashboard that uses the signed-in user's current username
+- Responsive UI refresh for login, register, dashboard, and public profile pages
 
 ## How To Run Backend
 
@@ -231,6 +235,7 @@ The frontend uses a small Vue structure:
 - `api/`: centralized Axios-based API helpers
 - `router/`: Vue Router setup with auth guard
 - `utils/`: token storage helpers and auth route helpers
+- `/dashboard`: one protected page with in-page sections for profile, links, and analytics
 
 ### Data Flow
 
@@ -755,6 +760,13 @@ ftp://example.com/file
 example.com/no-protocol
 ```
 
+### Link Position
+
+- Required
+- Must be an integer value of at least `1`
+- Must be unique within the same profile
+- Duplicate positions for the same profile are rejected
+
 ## Security Notes
 
 ### Password Handling
@@ -846,13 +858,16 @@ Possible future improvements:
 - [ ] Logout and verify token plus stored user are removed
 - [ ] Create a profile from `/dashboard`
 - [ ] Update the profile from `/dashboard`
+- [ ] Use Share Profile and verify it copies the current profile URL, or shows an error if no profile exists yet
 - [ ] Verify username normalization and uniqueness
 - [ ] Add a link
 - [ ] Edit a link
 - [ ] Delete a link
 - [ ] Toggle active/inactive status
+- [ ] Try creating or updating two links with the same `position` in one profile and verify the request is rejected
 - [ ] Confirm dangerous URLs are rejected
 - [ ] Open `/u/:username` without login and verify only active links are shown
+- [ ] Verify the public page shows fallback initials if the avatar image is missing or fails to load
 - [ ] Click a public link and verify redirect occurs
 - [ ] Verify click rows appear in `CLICK_EVENTS`
 - [ ] Verify analytics count updates on `/dashboard`
@@ -871,6 +886,7 @@ Possible future improvements:
 - No advanced anti-spam or anti-bot protection for click tracking
 - No advanced SEO or Open Graph image generation
 - No drag-and-drop reorder UI; ordering uses the numeric `position` field
+- Dashboard "Dashboard / Analytics / Settings" navigation is currently a single-page section switcher, not separate routes
 - No advanced automated test coverage has been added yet
 
 ## Future Improvements

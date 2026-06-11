@@ -26,7 +26,7 @@ defineEmits(['start-edit', 'cancel-edit', 'submit-edit', 'delete', 'toggle'])
     <div class="link-list__header">
       <div>
         <p class="eyebrow">Existing Links</p>
-        <h2>Your current links</h2>
+        <h2>Existing links</h2>
       </div>
       <p class="link-list__count">{{ links.length }} total</p>
     </div>
@@ -77,13 +77,15 @@ defineEmits(['start-edit', 'cancel-edit', 'submit-edit', 'delete', 'toggle'])
 
 .link-list__header h2 {
   margin: 0;
-  font-family: var(--font-heading);
-  font-size: 1.45rem;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  color: #132642;
 }
 
 .link-list__count {
   margin: 0;
-  color: var(--muted);
+  color: #69758a;
   font-weight: 700;
 }
 

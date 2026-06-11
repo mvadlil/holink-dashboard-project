@@ -75,8 +75,8 @@ function handleSubmit() {
   <form class="link-editor" :class="{ 'link-editor--compact': compact }" @submit.prevent="handleSubmit">
     <div class="link-editor__header">
       <div>
-        <p class="eyebrow">{{ mode === 'create' ? 'Link Management' : 'Editing Link' }}</p>
-        <h2>{{ heading }}</h2>
+        <p class="eyebrow">{{ mode === 'create' ? 'Your Links' : 'Editing Link' }}</p>
+        <h2>{{ mode === 'create' ? 'Add a new destination' : heading }}</h2>
       </div>
 
       <div class="link-editor__actions">
@@ -118,7 +118,7 @@ function handleSubmit() {
         />
       </label>
 
-      <label class="link-editor__field">
+      <label class="link-editor__field link-editor__field--slim">
         <span>Position</span>
         <input
           v-model.number="form.position"
@@ -132,7 +132,7 @@ function handleSubmit() {
 
       <label class="link-editor__toggle">
         <input v-model="form.isActive" type="checkbox" name="isActive" />
-        <span>Link is active on the public page</span>
+        <span>Active on your public profile</span>
       </label>
     </div>
   </form>
@@ -141,15 +141,18 @@ function handleSubmit() {
 <style scoped>
 .link-editor {
   display: grid;
-  gap: 22px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  padding: 24px;
-  background: var(--surface-strong);
+  gap: 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-card-sm);
+  padding: 22px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-soft);
 }
 
 .link-editor--compact {
-  padding: 20px;
+  padding: 18px;
+  border-radius: 20px;
+  box-shadow: none;
 }
 
 .link-editor__header {
@@ -161,8 +164,10 @@ function handleSubmit() {
 
 .link-editor__header h2 {
   margin: 0;
-  font-family: var(--font-heading);
-  font-size: 1.45rem;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: #132642;
 }
 
 .link-editor__actions {
@@ -173,8 +178,9 @@ function handleSubmit() {
 
 .link-editor__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr) 130px auto;
+  gap: 14px;
+  align-items: end;
 }
 
 .link-editor__field,
@@ -185,31 +191,39 @@ function handleSubmit() {
 
 .link-editor__field span,
 .link-editor__toggle span {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  color: var(--text);
+  color: #263042;
 }
 
 .link-editor__field input {
   width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #fff;
+  border: 1px solid var(--line-warm);
+  border-radius: var(--radius-field);
+  background: #fffdfb;
   padding: 14px 15px;
-  color: var(--text);
+  color: var(--text-strong);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.link-editor__field input::placeholder {
+  color: #99a4b5;
 }
 
 .link-editor__field input:focus {
   outline: none;
-  border-color: rgba(182, 84, 45, 0.45);
-  box-shadow: 0 0 0 4px rgba(182, 84, 45, 0.12);
+  border-color: rgba(184, 90, 22, 0.45);
+  box-shadow: 0 0 0 4px rgba(184, 90, 22, 0.1);
 }
 
 .link-editor__toggle {
-  align-content: end;
   grid-template-columns: auto 1fr;
   align-items: center;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid rgba(222, 191, 173, 0.72);
+  border-radius: var(--radius-field);
+  background: #fffdfb;
 }
 
 .link-editor__toggle input {
@@ -220,28 +234,33 @@ function handleSubmit() {
 
 .link-editor__submit,
 .link-editor__secondary {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 12px 18px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.18s ease, opacity 0.18s ease;
+  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
 }
 
 .link-editor__submit {
   border: none;
-  background: var(--accent);
+  background: var(--accent-gradient);
   color: #fff8f1;
+  box-shadow: 0 12px 24px rgba(184, 90, 22, 0.16);
 }
 
 .link-editor__secondary {
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--text);
+  border: 1px solid var(--line-soft);
+  background: #fff;
+  color: var(--text-strong);
 }
 
 .link-editor__submit:hover:enabled,
 .link-editor__secondary:hover:enabled {
   transform: translateY(-1px);
+}
+
+.link-editor__submit:hover:enabled {
+  box-shadow: 0 16px 28px rgba(184, 90, 22, 0.22);
 }
 
 .link-editor__submit:disabled,
@@ -250,9 +269,16 @@ function handleSubmit() {
   cursor: wait;
 }
 
+@media (max-width: 980px) {
+  .link-editor__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+
 @media (max-width: 720px) {
   .link-editor {
-    padding: 20px;
+    padding: 20px 18px;
   }
 
   .link-editor__header {
@@ -269,6 +295,10 @@ function handleSubmit() {
 
   .link-editor__grid {
     grid-template-columns: 1fr;
+  }
+
+  .link-editor__toggle {
+    min-height: 48px;
   }
 }
 </style>

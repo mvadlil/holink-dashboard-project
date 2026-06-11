@@ -8,6 +8,8 @@ import com.example.holink.dto.request.UpdateLinkRequest;
 import com.example.holink.dto.response.LinkResponse;
 import com.example.holink.entity.Link;
 import com.example.holink.entity.Profile;
+import com.example.holink.exception.BadRequestException;
+import com.example.holink.exception.ConflictException;
 import com.example.holink.exception.ForbiddenException;
 import com.example.holink.exception.NotFoundException;
 import com.example.holink.repository.LinkRepository;
@@ -43,6 +45,7 @@ public class LinkService {
                 .orElseThrow(() -> new NotFoundException("Profile not found"));
 
         assertOwnership(profile);
+        validatePositionForCreate(profile.getId(), request.getPosition());
 
         Link link = new Link();
         link.setProfile(profile);
@@ -57,6 +60,7 @@ public class LinkService {
                 .orElseThrow(() -> new NotFoundException("Link not found"));
 
         assertOwnership(link.getProfile());
+        validatePositionForUpdate(link.getProfile().getId(), request.getPosition(), link.getId());
         applyLinkValues(link, request.getTitle(), request.getUrl(), request.getIsActive(), request.getPosition());
 
         return LinkResponse.fromEntity(linkRepository.save(link));
@@ -83,9 +87,30 @@ public class LinkService {
                                  String url,
                                  Boolean isActive,
                                  Integer position) {
+        validatePositionValue(position);
         link.setTitle(textValidator.validateLinkTitle(title));
         link.setUrl(safeUrlValidator.validateRequiredLinkUrl(url));
         link.setActive(isActive);
         link.setPosition(position);
+    }
+
+    private void validatePositionForCreate(String profileId, Integer position) {
+        validatePositionValue(position);
+        if (linkRepository.existsByProfileIdAndPosition(profileId, position)) {
+            throw new ConflictException("Link position is already used for this profile");
+        }
+    }
+
+    private void validatePositionForUpdate(String profileId, Integer position, String linkId) {
+        validatePositionValue(position);
+        if (linkRepository.existsByProfileIdAndPositionAndIdNot(profileId, position, linkId)) {
+            throw new ConflictException("Link position is already used for this profile");
+        }
+    }
+
+    private void validatePositionValue(Integer position) {
+        if (position == null || position < 1) {
+            throw new BadRequestException("Link position must be at least 1");
+        }
     }
 }

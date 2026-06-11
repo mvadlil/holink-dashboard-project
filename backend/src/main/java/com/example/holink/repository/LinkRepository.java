@@ -11,4 +11,8 @@ public interface LinkRepository extends JpaRepository<Link, String> {
     List<Link> findByProfileIdOrderByPositionAsc(String profileId);
 
     List<Link> findByProfileIdAndIsActiveTrueOrderByPositionAsc(String profileId);
+
+    boolean existsByProfileIdAndPosition(String profileId, Integer position);
+
+    boolean existsByProfileIdAndPositionAndIdNot(String profileId, Integer position, String id);
 }

@@ -1,6 +1,7 @@
 <script setup>
 import axios from 'axios'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { getLinkAnalytics } from '../api/analyticsApi'
 import { createLink, deleteLink, updateLink } from '../api/linkApi'
@@ -12,6 +13,9 @@ import LinkEditor from '../components/LinkEditor.vue'
 import LinkList from '../components/LinkList.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ProfileForm from '../components/ProfileForm.vue'
+import { clearAuthStorage, getStoredUser } from '../utils/authStorage'
+
+const router = useRouter()
 
 const isLoading = ref(true)
 const isProfileSaving = ref(false)
@@ -29,6 +33,40 @@ const profileErrorMessage = ref('')
 const linkFeedbackMessage = ref('')
 const linkErrorMessage = ref('')
 const analyticsErrorMessage = ref('')
+const storedUser = ref(getStoredUser())
+const activeNavTab = ref('dashboard')
+
+const dashboardSections = [
+  { id: 'dashboard-hero', tab: 'dashboard' },
+  { id: 'dashboard-profile', tab: 'settings' },
+  { id: 'dashboard-links', tab: 'dashboard' },
+  { id: 'dashboard-analytics', tab: 'analytics' },
+]
+
+const profileUrl = computed(() => {
+  if (!profile.value?.username) {
+    return ''
+  }
+
+  return `${window.location.origin}/u/${profile.value.username}`
+})
+
+const dashboardIdentity = computed(() => {
+  const label = storedUser.value?.name || storedUser.value?.email || 'My Account'
+  const email = storedUser.value?.email || 'Local prototype user'
+  const initialsSource = label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('')
+
+  return {
+    label,
+    email,
+    initials: initialsSource || 'H',
+  }
+})
 
 const formValues = computed(() => {
   if (!profile.value) {
@@ -51,16 +89,76 @@ const formValues = computed(() => {
 const mode = computed(() => (profile.value ? 'edit' : 'create'))
 
 onMounted(() => {
+  window.addEventListener('scroll', syncActiveTabFromScroll, { passive: true })
   loadDashboard()
+  syncActiveTabFromScroll()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', syncActiveTabFromScroll)
 })
 
 async function loadDashboard() {
+  storedUser.value = getStoredUser()
   await loadDashboardProfile()
 
   if (profile.value?.id) {
     await loadAnalytics()
   } else {
     resetAnalyticsState(false)
+  }
+}
+
+function scrollToSection(sectionId) {
+  const sectionToTab = {
+    'dashboard-hero': 'dashboard',
+    'dashboard-profile': 'settings',
+    'dashboard-links': 'dashboard',
+    'dashboard-analytics': 'analytics',
+  }
+
+  activeNavTab.value = sectionToTab[sectionId] || 'dashboard'
+  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function syncActiveTabFromScroll() {
+  let currentTab = 'dashboard'
+
+  for (const section of dashboardSections) {
+    const element = document.getElementById(section.id)
+    if (!element) {
+      continue
+    }
+
+    const rect = element.getBoundingClientRect()
+    if (rect.top <= 140) {
+      currentTab = section.tab
+    }
+  }
+
+  activeNavTab.value = currentTab
+}
+
+async function handleLogout() {
+  clearAuthStorage()
+  await router.push('/login')
+}
+
+async function handleShareProfile() {
+  if (!profileUrl.value) {
+    profileErrorMessage.value = 'Profile not created yet.'
+    profileFeedbackMessage.value = ''
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(profileUrl.value)
+    profileErrorMessage.value = ''
+    profileFeedbackMessage.value = 'Public profile link copied to your clipboard.'
+  } catch {
+    profileErrorMessage.value = ''
+    window.open(profileUrl.value, '_blank', 'noopener')
+    profileFeedbackMessage.value = 'Public profile opened in a new tab.'
   }
 }
 
@@ -275,15 +373,64 @@ function toFriendlyMessage(error, fallbackMessage) {
 </script>
 
 <template>
-  <section class="page-shell dashboard-shell">
-    <div class="page-card dashboard-card">
-      <div class="dashboard-copy">
-        <p class="eyebrow">Dashboard</p>
-        <h1>HoLink Dashboard</h1>
-        <p class="page-copy">
-          Manage your public profile, links, and click totals all in one place.
-        </p>
+  <section class="dashboard-shell">
+    <header class="dashboard-topbar">
+      <div class="dashboard-topbar__brand">
+        <div class="dashboard-topbar__logo">Ho</div>
+        <span>HoLink</span>
       </div>
+
+      <nav class="dashboard-topbar__nav" aria-label="Dashboard sections">
+        <button
+          type="button"
+          :class="['dashboard-topbar__tab', { 'dashboard-topbar__tab--active': activeNavTab === 'dashboard' }]"
+          @click="scrollToSection('dashboard-hero')"
+        >
+          Dashboard
+        </button>
+        <button
+          type="button"
+          :class="['dashboard-topbar__tab', { 'dashboard-topbar__tab--active': activeNavTab === 'analytics' }]"
+          @click="scrollToSection('dashboard-analytics')"
+        >
+          Analytics
+        </button>
+        <button
+          type="button"
+          :class="['dashboard-topbar__tab', { 'dashboard-topbar__tab--active': activeNavTab === 'settings' }]"
+          @click="scrollToSection('dashboard-profile')"
+        >
+          Settings
+        </button>
+      </nav>
+
+      <div class="dashboard-topbar__actions">
+        <button class="dashboard-topbar__share" type="button" @click="handleShareProfile">
+          Share Profile
+        </button>
+
+        <div class="dashboard-topbar__user">
+          <div class="dashboard-topbar__avatar">{{ dashboardIdentity?.initials || 'H' }}</div>
+          <div class="dashboard-topbar__user-copy">
+            <strong>{{ dashboardIdentity?.label || 'My Account' }}</strong>
+            <span>{{ dashboardIdentity?.email || 'Local prototype user' }}</span>
+          </div>
+        </div>
+
+        <button class="dashboard-topbar__logout" type="button" @click="handleLogout">Logout</button>
+      </div>
+    </header>
+
+    <div class="dashboard-container">
+      <section id="dashboard-hero" class="dashboard-hero">
+        <div>
+          <p class="eyebrow">Creator Workspace</p>
+          <h1>HoLink Dashboard</h1>
+          <p class="page-copy">
+            Manage your public identity, link stack, and performance from one airy workspace.
+          </p>
+        </div>
+      </section>
 
       <LoadingState v-if="isLoading" />
 
@@ -294,50 +441,27 @@ function toFriendlyMessage(error, fallbackMessage) {
           <p>{{ profileFeedbackMessage }}</p>
         </div>
 
-        <ProfileForm
-          :initial-values="formValues"
-          :mode="mode"
-          :saving="isProfileSaving"
-          @submit="handleProfileSubmit"
-        />
-
-        <div v-if="profile" class="dashboard-summary">
-          <h2>Current Profile Snapshot</h2>
-          <dl class="summary-grid">
-            <div>
-              <dt>Username</dt>
-              <dd>{{ profile.username }}</dd>
-            </div>
-            <div>
-              <dt>Display Name</dt>
-              <dd>{{ profile.displayName }}</dd>
-            </div>
-            <div>
-              <dt>Bio</dt>
-              <dd>{{ profile.bio || 'No bio yet' }}</dd>
-            </div>
-            <div>
-              <dt>Avatar URL</dt>
-              <dd>{{ profile.avatarUrl || 'No avatar URL yet' }}</dd>
-            </div>
-          </dl>
-          <p class="dashboard-note">
-            Saved links found for this profile: {{ dashboardLinks.length }}.
-          </p>
-        </div>
+        <section id="dashboard-profile" class="dashboard-section">
+          <ProfileForm
+            :initial-values="formValues"
+            :mode="mode"
+            :saving="isProfileSaving"
+            @submit="handleProfileSubmit"
+          />
+        </section>
 
         <EmptyState
-          v-else
+          v-if="!profile"
           title="Create your profile first"
           description="Fill out the profile form above first. Once it is saved, link management will appear here."
         />
 
-        <section v-if="profile" class="dashboard-links">
+        <section v-if="profile" id="dashboard-links" class="dashboard-section dashboard-links">
           <div class="dashboard-links__copy">
-            <p class="eyebrow">Links</p>
-            <h2>Manage your public destinations</h2>
+            <p class="eyebrow">Your Links</p>
+            <h2>Your Links</h2>
             <p>
-              Add, reorder, edit, and disable links here. Every change refreshes from the backend so your dashboard stays in sync.
+              Add, edit, and control which destinations appear on your public page.
             </p>
           </div>
 
@@ -368,6 +492,7 @@ function toFriendlyMessage(error, fallbackMessage) {
 
         <AnalyticsSummary
           v-if="profile"
+          id="dashboard-analytics"
           :items="analyticsItems"
           :is-loading="isAnalyticsLoading"
           :is-refreshing="isAnalyticsRefreshing"
@@ -382,21 +507,178 @@ function toFriendlyMessage(error, fallbackMessage) {
 <style scoped>
 .dashboard-shell {
   display: grid;
+  gap: 24px;
+  padding: 20px 24px 28px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 232, 216, 0.72), transparent 24%),
+    linear-gradient(180deg, #f8f5ef 0%, #f4efe6 100%);
 }
 
-.dashboard-card {
-  display: grid;
-  gap: 26px;
+.dashboard-topbar {
+  width: min(100%, 1320px);
+  margin: 0 auto;
+  position: sticky;
+  top: 12px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 36px rgba(121, 109, 95, 0.07);
+  backdrop-filter: blur(14px);
 }
 
-.dashboard-copy {
+.dashboard-topbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #b85a16;
+  font-weight: 800;
+  font-size: 1.45rem;
+  letter-spacing: -0.03em;
+}
+
+.dashboard-topbar__logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   display: grid;
+  place-items: center;
+  background: rgba(184, 90, 22, 0.12);
+  font-size: 0.95rem;
+}
+
+.dashboard-topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dashboard-topbar__tab {
+  border: none;
+  background: transparent;
+  padding: 9px 12px;
+  border-radius: var(--radius-pill);
+  color: #6c7688;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.dashboard-topbar__tab--active {
+  color: #b85a16;
+  background: rgba(184, 90, 22, 0.1);
+}
+
+.dashboard-topbar__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dashboard-topbar__share,
+.dashboard-topbar__logout {
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.dashboard-topbar__share {
+  border: 1px solid var(--line-soft);
+  background: #ffffff;
+  color: #455267;
+  padding: 11px 16px;
+}
+
+.dashboard-topbar__logout {
+  border: none;
+  background: var(--accent-gradient);
+  color: #fff8f1;
+  padding: 11px 16px;
+  box-shadow: 0 10px 22px rgba(184, 90, 22, 0.16);
+}
+
+.dashboard-topbar__share:hover,
+.dashboard-topbar__logout:hover {
+  transform: translateY(-1px);
+}
+
+.dashboard-topbar__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: #f8fbff;
+  border: 1px solid var(--line-soft);
+  min-width: 0;
+}
+
+.dashboard-topbar__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #b85a16 0%, #cf6d22 100%);
+  color: #fff8f1;
+  font-weight: 800;
+}
+
+.dashboard-topbar__user-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.dashboard-topbar__user-copy strong {
+  color: #182c47;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.dashboard-topbar__user-copy span {
+  color: #6c7688;
+  font-size: 0.82rem;
+  word-break: break-word;
+}
+
+.dashboard-container {
+  width: min(100%, 1320px);
+  margin: 0 auto;
+  display: grid;
+  gap: 24px;
+}
+
+.dashboard-hero {
+  display: grid;
+  gap: 10px;
+  padding: 6px 4px 0;
+}
+
+.dashboard-hero h1 {
+  margin: 0;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-size: clamp(2.6rem, 4vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: #142946;
 }
 
 .dashboard-stack {
   display: grid;
-  gap: 18px;
+  gap: 24px;
+}
+
+.dashboard-section {
+  display: grid;
 }
 
 .dashboard-success p {
@@ -406,50 +688,7 @@ function toFriendlyMessage(error, fallbackMessage) {
 .dashboard-success {
   border-color: rgba(74, 140, 88, 0.22);
   color: #2f6b3a;
-  background: rgba(112, 176, 124, 0.12);
-}
-
-.dashboard-summary {
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  padding: 22px;
-  background: var(--surface-strong);
-}
-
-.dashboard-summary h2 {
-  margin: 0 0 16px;
-  font-family: var(--font-heading);
-  font-size: 1.35rem;
-}
-
-.summary-grid {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.summary-grid div {
-  display: grid;
-  gap: 6px;
-}
-
-.summary-grid dt {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-}
-
-.summary-grid dd {
-  margin: 0;
-  color: var(--text);
-  word-break: break-word;
-}
-
-.dashboard-note {
-  margin: 18px 0 0;
-  color: var(--muted);
+  background: rgba(112, 176, 124, 0.1);
 }
 
 .dashboard-links {
@@ -460,22 +699,69 @@ function toFriendlyMessage(error, fallbackMessage) {
 .dashboard-links__copy {
   display: grid;
   gap: 10px;
+  padding: 0 4px;
 }
 
 .dashboard-links__copy h2 {
   margin: 0;
-  font-family: var(--font-heading);
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
   font-size: 1.5rem;
+  color: #132642;
 }
 
 .dashboard-links__copy p:last-child {
   margin: 0;
-  color: var(--muted);
+  color: var(--muted-soft);
+}
+
+@media (max-width: 1080px) {
+  .dashboard-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-topbar__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dashboard-topbar__user {
+    flex: 1 1 260px;
+  }
 }
 
 @media (max-width: 720px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
+  .dashboard-shell {
+    gap: 18px;
+    padding: 12px 16px 24px;
+  }
+
+  .dashboard-topbar__nav,
+  .dashboard-topbar__actions {
+    width: 100%;
+  }
+
+  .dashboard-topbar__tab,
+  .dashboard-topbar__share,
+  .dashboard-topbar__logout {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .dashboard-topbar__user {
+    width: 100%;
+  }
+
+  .dashboard-topbar__logout {
+    width: 100%;
+  }
+
+  .dashboard-hero {
+    padding-top: 4px;
+  }
+
+  .dashboard-hero h1 {
+    font-size: 2.25rem;
   }
 }
 </style>

@@ -45,6 +45,38 @@ const shouldShowAvatarImage = computed(() => {
   return Boolean(profile.value?.avatarUrl) && !hasAvatarLoadError.value
 })
 
+function getLinkHint(link) {
+  const normalizedTitle = (link.title || '').toLowerCase()
+
+  if (normalizedTitle.includes('instagram')) {
+    return 'Visual diary and daily updates'
+  }
+
+  if (normalizedTitle.includes('profile') || normalizedTitle.includes('portfolio')) {
+    return 'Professional portfolio and links'
+  }
+
+  return link.url
+}
+
+function getLinkIcon(link) {
+  const normalizedTitle = (link.title || '').toLowerCase()
+
+  if (normalizedTitle.includes('instagram')) {
+    return 'IG'
+  }
+
+  if (normalizedTitle.includes('youtube')) {
+    return 'YT'
+  }
+
+  if (normalizedTitle.includes('profile') || normalizedTitle.includes('portfolio')) {
+    return 'P'
+  }
+
+  return (link.title || 'L').charAt(0).toUpperCase()
+}
+
 onMounted(() => {
   loadPublicProfile()
 })
@@ -133,8 +165,8 @@ function toFriendlyMessage(error, fallbackMessage) {
 </script>
 
 <template>
-  <section class="page-shell public-page">
-    <div class="page-card public-card">
+  <section class="public-page">
+    <div class="public-card">
       <LoadingState v-if="isLoading" />
 
       <div v-else class="public-stack">
@@ -162,10 +194,9 @@ function toFriendlyMessage(error, fallbackMessage) {
             </div>
 
             <div class="public-copy">
-              <p class="eyebrow">Public Profile</p>
               <h1>{{ profile.displayName }}</h1>
               <p class="public-username">@{{ profile.username }}</p>
-              <p v-if="profile.bio" class="page-copy public-bio">{{ profile.bio }}</p>
+              <p v-if="profile.bio" class="public-bio">{{ profile.bio }}</p>
             </div>
           </header>
 
@@ -183,15 +214,27 @@ function toFriendlyMessage(error, fallbackMessage) {
               :href="link.url"
               @click.prevent="handleLinkClick(link)"
             >
-              <div class="public-link-copy">
-                <h2>{{ link.title }}</h2>
-                <p>{{ link.url }}</p>
+              <div class="public-link-copy-wrap">
+                <div class="public-link-icon" aria-hidden="true">
+                  {{ getLinkIcon(link) }}
+                </div>
+
+                <div class="public-link-copy">
+                  <h2>{{ link.title }}</h2>
+                  <p>{{ getLinkHint(link) }}</p>
+                </div>
               </div>
+
               <span class="public-link-action">
                 {{ isRedirectingLinkId === link.id ? 'Opening...' : 'Visit' }}
               </span>
             </a>
           </div>
+
+          <footer class="public-footer">
+            <span>Powered by</span>
+            <strong>HoLink</strong>
+          </footer>
         </template>
       </div>
     </div>
@@ -201,11 +244,22 @@ function toFriendlyMessage(error, fallbackMessage) {
 <style scoped>
 .public-page {
   display: grid;
+  min-height: 100vh;
+  place-items: start center;
+  padding: 44px 20px 32px;
+  background:
+    radial-gradient(circle at top, rgba(255, 236, 222, 0.75), transparent 26%),
+    linear-gradient(180deg, #faf7f1 0%, #f5f0e8 100%);
 }
 
 .public-card {
+  width: min(100%, 640px);
   display: grid;
   gap: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .public-stack {
@@ -215,9 +269,9 @@ function toFriendlyMessage(error, fallbackMessage) {
 
 .public-hero {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 22px;
-  align-items: start;
+  justify-items: center;
+  text-align: center;
+  gap: 16px;
 }
 
 .public-avatar-wrap {
@@ -225,53 +279,60 @@ function toFriendlyMessage(error, fallbackMessage) {
 }
 
 .public-avatar {
-  width: 108px;
-  height: 108px;
+  width: 116px;
+  height: 116px;
   border-radius: 999px;
   object-fit: cover;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  background: var(--surface-strong);
+  border: 2px solid rgba(255, 250, 244, 0.95);
+  box-shadow: 0 20px 40px rgba(121, 109, 95, 0.12);
+  background: #fffdf9;
 }
 
 .public-avatar--fallback {
   display: grid;
   place-items: center;
-  color: var(--accent);
-  font-family: var(--font-heading);
+  color: #fff8f1;
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.06em;
   background:
-    radial-gradient(circle at top left, rgba(182, 84, 45, 0.18), transparent 54%),
-    linear-gradient(180deg, #fffaf2 0%, #f7ecdc 100%);
+    radial-gradient(circle at top left, rgba(255, 206, 176, 0.22), transparent 54%),
+    linear-gradient(135deg, #b85a16 0%, #cf6d22 100%);
 }
 
 .public-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
 .public-copy h1 {
   margin: 0;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: #132642;
 }
 
 .public-username {
   margin: 0;
-  color: var(--accent);
+  color: #6f7b90;
   font-weight: 700;
   word-break: break-word;
 }
 
 .public-bio {
-  max-width: 44rem;
+  margin: 4px 0 0;
+  max-width: 28rem;
+  color: #58667b;
+  line-height: 1.7;
   word-break: break-word;
 }
 
 .public-links {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .public-link-card {
@@ -279,18 +340,38 @@ function toFriendlyMessage(error, fallbackMessage) {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: center;
-  padding: 20px 22px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--surface-strong);
+  padding: 18px 18px 18px 16px;
+  border: 1px solid rgba(206, 215, 231, 0.95);
+  border-radius: var(--radius-card-sm);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 26px rgba(121, 109, 95, 0.05);
   text-decoration: none;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .public-link-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(182, 84, 45, 0.3);
-  box-shadow: 0 14px 30px rgba(78, 55, 33, 0.1);
+  border-color: rgba(184, 90, 22, 0.26);
+  box-shadow: 0 18px 34px rgba(121, 109, 95, 0.09);
+}
+
+.public-link-copy-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.public-link-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: #eef4ff;
+  color: #b85a16;
+  font-weight: 800;
 }
 
 .public-link-copy {
@@ -299,13 +380,15 @@ function toFriendlyMessage(error, fallbackMessage) {
 
 .public-link-copy h2 {
   margin: 0 0 6px;
-  font-family: var(--font-heading);
-  font-size: 1.25rem;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-size: 1.02rem;
+  color: #132642;
 }
 
 .public-link-copy p {
   margin: 0;
-  color: var(--muted);
+  color: #6f7b90;
+  font-size: 0.9rem;
   word-break: break-word;
 }
 
@@ -313,17 +396,40 @@ function toFriendlyMessage(error, fallbackMessage) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 82px;
   padding: 10px 16px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-soft);
+  background: #fff;
+  color: var(--text-strong);
   font-weight: 700;
   white-space: nowrap;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.public-link-card:hover .public-link-action {
+  transform: translateY(-1px);
+  border-color: rgba(184, 90, 22, 0.24);
+}
+
+.public-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 8px;
+  color: #9a8a77;
+  font-size: 0.82rem;
+}
+
+.public-footer strong {
+  color: #b85a16;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 720px) {
-  .public-hero {
-    grid-template-columns: 1fr;
+  .public-page {
+    padding: 28px 16px 28px;
   }
 
   .public-avatar {
@@ -334,6 +440,16 @@ function toFriendlyMessage(error, fallbackMessage) {
   .public-link-card {
     grid-template-columns: 1fr;
     align-items: start;
+    padding: 16px;
+  }
+
+  .public-link-action {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .public-link-copy-wrap {
+    align-items: flex-start;
   }
 }
 </style>

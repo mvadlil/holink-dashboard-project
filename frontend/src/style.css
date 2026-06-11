@@ -2,13 +2,30 @@
   --bg: #f4efe5;
   --surface: rgba(255, 252, 246, 0.82);
   --surface-strong: #fffdf9;
+  --surface-card: rgba(255, 255, 255, 0.92);
   --text: #2f241c;
+  --text-strong: #132642;
   --muted: #6b5c4e;
+  --muted-soft: #69758a;
   --line: rgba(84, 62, 44, 0.14);
+  --line-soft: rgba(206, 215, 231, 0.95);
+  --line-warm: rgba(222, 191, 173, 0.92);
   --accent: #b6542d;
   --accent-soft: rgba(182, 84, 45, 0.12);
+  --accent-strong: #b85a16;
+  --accent-gradient: linear-gradient(135deg, #b85a16 0%, #cf6d22 100%);
+  --blue-soft: #eef4ff;
+  --blue-line: #bfd7ff;
   --danger: #b83f3f;
+  --success: #2f6b3a;
+  --success-soft: rgba(112, 176, 124, 0.1);
   --shadow: 0 20px 50px rgba(78, 55, 33, 0.14);
+  --shadow-soft: 0 12px 28px rgba(121, 109, 95, 0.06);
+  --shadow-medium: 0 18px 42px rgba(121, 109, 95, 0.08);
+  --radius-card: 24px;
+  --radius-card-sm: 20px;
+  --radius-field: 14px;
+  --radius-pill: 999px;
   --font-body: "Trebuchet MS", "Gill Sans", "Lucida Sans Unicode", sans-serif;
   --font-heading: Georgia, "Times New Roman", serif;
   color: var(--text);
@@ -46,6 +63,15 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+img {
+  max-width: 100%;
+  display: block;
 }
 
 .app-shell {
@@ -162,41 +188,20 @@ select {
   display: grid;
 }
 
-.page-card,
 .feedback-card {
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: var(--radius-card);
   background: var(--surface);
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow);
 }
 
-.page-card {
-  padding: 34px 28px;
-}
-
-.page-card h1 {
-  margin: 0 0 12px;
-  font-family: var(--font-heading);
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.05;
-}
-
 .page-copy {
   margin: 0;
   max-width: 42rem;
-  color: var(--muted);
+  color: var(--muted-soft);
   font-size: 1.05rem;
-}
-
-.username-chip {
-  display: inline-flex;
-  margin-left: 8px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 700;
+  line-height: 1.7;
 }
 
 .feedback-card {
@@ -204,6 +209,8 @@ select {
   display: flex;
   align-items: center;
   gap: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-soft);
 }
 
 .feedback-card p,
@@ -218,12 +225,25 @@ select {
 
 .feedback-card-error {
   color: var(--danger);
-  border-color: rgba(184, 63, 63, 0.22);
+  border-color: rgba(184, 63, 63, 0.24);
+  background: rgba(255, 244, 243, 0.94);
 }
 
 .feedback-card-empty {
   display: block;
-  color: var(--muted);
+  color: var(--muted-soft);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.feedback-card-empty h2 {
+  margin-bottom: 8px;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+.feedback-card-empty p {
+  line-height: 1.7;
 }
 
 .loading-dot {
@@ -265,11 +285,6 @@ select {
     align-items: stretch;
     justify-content: stretch;
     flex-direction: column;
-  }
-
-  .page-card {
-    padding: 26px 20px;
-    border-radius: 22px;
   }
 
   .app-nav {

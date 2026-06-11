@@ -1,13 +1,15 @@
 <script setup>
 import axios from 'axios'
 import { reactive, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import { login } from '../api/authApi'
 import ErrorMessage from '../components/ErrorMessage.vue'
+import { normalizeRedirectTarget } from '../utils/authRoute'
 import { setStoredUser, setToken } from '../utils/authStorage'
 
 const router = useRouter()
+const route = useRoute()
 
 const isSubmitting = ref(false)
 const errorMessage = ref('')
@@ -25,7 +27,8 @@ async function handleSubmit() {
     const response = await login(form.email, form.password)
     setToken(response.token)
     setStoredUser(response.user)
-    await router.push('/dashboard')
+    const redirectTarget = normalizeRedirectTarget(route.query.redirect)
+    await router.push(redirectTarget)
   } catch (error) {
     errorMessage.value = toFriendlyMessage(error, 'We could not log you in right now.')
   } finally {

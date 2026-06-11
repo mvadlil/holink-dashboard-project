@@ -1,7 +1,6 @@
 <script setup>
 import axios from 'axios'
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
 
 import { getLinkAnalytics } from '../api/analyticsApi'
 import { createLink, deleteLink, updateLink } from '../api/linkApi'
@@ -30,7 +29,6 @@ const profileErrorMessage = ref('')
 const linkFeedbackMessage = ref('')
 const linkErrorMessage = ref('')
 const analyticsErrorMessage = ref('')
-const authRequired = ref(false)
 
 const formValues = computed(() => {
   if (!profile.value) {
@@ -69,7 +67,6 @@ async function loadDashboard() {
 async function loadDashboardProfile() {
   isLoading.value = true
   profileErrorMessage.value = ''
-  authRequired.value = false
 
   try {
     const response = await getMyProfile()
@@ -77,11 +74,6 @@ async function loadDashboardProfile() {
     dashboardLinks.value = response.links ?? []
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      authRequired.value = true
-      profile.value = null
-      dashboardLinks.value = []
-      resetAnalyticsState(false)
-      profileErrorMessage.value = 'Please log in to access your dashboard.'
       return
     }
 
@@ -298,13 +290,6 @@ function toFriendlyMessage(error, fallbackMessage) {
       <div v-else class="dashboard-stack">
         <ErrorMessage v-if="profileErrorMessage" :message="profileErrorMessage" />
 
-        <div v-if="authRequired" class="feedback-card feedback-card-empty dashboard-auth-prompt">
-          <h2>Login required</h2>
-          <p>Your dashboard is now connected to JWT authentication.</p>
-          <RouterLink class="dashboard-auth-link" to="/login">Go to Login</RouterLink>
-        </div>
-
-        <template v-else>
         <div v-if="profileFeedbackMessage" class="feedback-card dashboard-success" role="status">
           <p>{{ profileFeedbackMessage }}</p>
         </div>
@@ -389,7 +374,6 @@ function toFriendlyMessage(error, fallbackMessage) {
           :error-message="analyticsErrorMessage"
           @refresh="loadAnalytics({ silent: true })"
         />
-        </template>
       </div>
     </div>
   </section>
@@ -487,23 +471,6 @@ function toFriendlyMessage(error, fallbackMessage) {
 .dashboard-links__copy p:last-child {
   margin: 0;
   color: var(--muted);
-}
-
-.dashboard-auth-prompt {
-  display: grid;
-  gap: 12px;
-}
-
-.dashboard-auth-link {
-  display: inline-flex;
-  width: fit-content;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(182, 84, 45, 0.3);
-  background: var(--surface-strong);
-  color: var(--accent);
-  font-weight: 700;
-  text-decoration: none;
 }
 
 @media (max-width: 720px) {

@@ -68,6 +68,14 @@ select {
   gap: 16px;
 }
 
+.app-header__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .brand-kicker,
 .eyebrow {
   margin: 0 0 6px;
@@ -106,6 +114,43 @@ select {
 
 .app-nav a:hover {
   transform: translateY(-1px);
+}
+
+.app-nav__button {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.app-nav__button:hover {
+  transform: translateY(-1px);
+  color: var(--accent);
+  border-color: rgba(182, 84, 45, 0.34);
+}
+
+.auth-badge {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.58);
+  min-width: 0;
+}
+
+.auth-badge__label {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.auth-badge__meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+  word-break: break-word;
 }
 
 .app-main {
@@ -215,6 +260,13 @@ select {
     flex-direction: column;
   }
 
+  .app-header__controls {
+    width: 100%;
+    align-items: stretch;
+    justify-content: stretch;
+    flex-direction: column;
+  }
+
   .page-card {
     padding: 26px 20px;
     border-radius: 22px;
@@ -227,5 +279,9 @@ select {
   .app-nav a {
     flex: 1 1 auto;
     text-align: center;
+  }
+
+  .app-nav__button {
+    flex: 1 1 auto;
   }
 }

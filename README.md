@@ -95,7 +95,10 @@ Run:
 
 ```bash
 cd backend
+
 mvn spring-boot:run
+or
+.\mvnw.cmd spring-boot:run
 ```
 
 Default backend URL:
